@@ -18,8 +18,8 @@ Enter a question or press enter to quit: What is sk?
 ```
 
 ```
-Enter a question or press enter to quit: What is sk?
-🤖: Semantic Kernel (SK) is a lightweight SDK that lets you easily mix conventional programming languages with the latest in Large Language Model (LLM) AI "prompts" with templating, chaining, and planning capabilities out-of-the-box.
+Enter a question or press enter to quit: What systems cann SK connect to?
+🤖: SK can connect to external APIs, MS Graph Connector Kit, Bing search query, OpenXML streams, and SQLite.
 ```
 
 ```
