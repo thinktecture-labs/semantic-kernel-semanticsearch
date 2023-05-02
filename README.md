@@ -1,16 +1,17 @@
-# Question and Answer flow with Semantic Kernel
+# Question & Answer flow with C# & Semantic Kernel
 
-A sample implementation of a question and answer flow using Semantic Kernel.
+A sample implementation of a question & answer flow using [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
 
-This uses sqlite to store embeddings (caution: sqlite is not vector optimized) and OpenAi to answer questions based on the text found in the database.
+This uses sqlite to store embeddings (caution: sqlite is not vector-optimized!) and OpenAi to answer questions based on the text found in the database. The database is populated based on URLs from the configuration.
 
 ## How to run
 
-- Get an OpenAI API Key
-- Copy & Paste the API key into the appsettings.json or user secrets (`OpenAI:ApiKey`)
+- Get an [OpenAI API Key](https://platform.openai.com/account/api-keys)
+- Copy & paste the API key into the `appsettings.json` or user secrets (`OpenAI:ApiKey`)
+- Optionally adjust the input data in the `appsettings.json` (entry `Urls`)
 - `dotnet run`
 
-## Examples
+## Examples (based on the default content URLs in the sample code) 
 
 ```
 Enter a question or press enter to quit: What is sk?
@@ -41,12 +42,12 @@ Enter a question or press enter to quit: ¿Qué significa SK?
 
 ## How does it work?
 
-- At the first run the program will download a couple of pages of the Semantic Kernel documentation.
-- For each page embeddings will be calculated using the OpenAI Embeddings model.
+- At the first run, the program will download a couple of pages of the Semantic Kernel documentation (configured in `appsettings.json`).
+- For each page, embeddings will be calculated using the [OpenAI Embeddings model](https://platform.openai.com/docs/guides/embeddings).
 - The content of the page and the embeddings are stored in a sqlite database.
 - When asked a question, embeddings will be calculated for the question.
-- The sqlite database will be searched be similar embeddings
-- The top 2 results will be concatenated and send to OpenAI with the following prompts
+- The sqlite database will be searched be similar embeddings.
+- The top 2 results will be concatenated and sent to OpenAI with the following prompts:
 
 ```
 Use the following pieces of context to answer the question at the end. If you don't know the answer, don't try to make up an answer and answer with 'I don't know'. Answer in the langauge that used for the question.
