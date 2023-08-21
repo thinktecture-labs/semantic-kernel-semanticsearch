@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Memory.Sqlite;
-using Microsoft.SemanticKernel.KernelExtensions;
 using Microsoft.SemanticKernel.Orchestration;
 
 const string COLLECTION = "documentation";
@@ -14,12 +13,12 @@ var config = new ConfigurationBuilder()
 
 var index = !File.Exists("index.db");
 var store = await SqliteMemoryStore.ConnectAsync("index.db");
-var kernel = new KernelBuilder()
-    .Configure(c =>
-    {
-        c.AddOpenAITextEmbeddingGenerationService("ada", "text-embedding-ada-002", config["OpenAi:ApiKey"]);
-        c.AddOpenAITextCompletionService("davinci-openai", "text-davinci-003", config["OpenAi:ApiKey"]);
-    })
+
+var httpClient = new HttpClient(); //new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
+
+var kernel = Kernel.Builder
+    .WithOpenAITextEmbeddingGenerationService("text-embedding-ada-002", config["OpenAi:ApiKey"], httpClient: httpClient)
+    .WithOpenAITextCompletionService("text-davinci-003", config["OpenAi:ApiKey"], httpClient: httpClient)
     .WithMemoryStorage(store)
     .Build();
 
@@ -54,7 +53,7 @@ async Task<string> Answer(string question)
     };
     
     var result = await kernel.RunAsync(variables, kernel.Skills.GetFunction("qa", "answer"));
-    return result.Result;    
+    return result.Result;
 }
 
 async Task Index()
