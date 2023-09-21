@@ -14,11 +14,15 @@ var config = new ConfigurationBuilder()
 var index = !File.Exists("index.db");
 var store = await SqliteMemoryStore.ConnectAsync("index.db");
 
-var httpClient = new HttpClient(); //new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
+var httpClient = new HttpClient(new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
 
 var kernel = Kernel.Builder
-    .WithOpenAITextEmbeddingGenerationService("text-embedding-ada-002", config["OpenAi:ApiKey"], httpClient: httpClient)
-    .WithOpenAITextCompletionService("text-davinci-003", config["OpenAi:ApiKey"], httpClient: httpClient)
+    .WithOpenAITextEmbeddingGenerationService("text-embedding-ada-002", 
+        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
+        httpClient: httpClient)
+    .WithOpenAIChatCompletionService("gpt-4", 
+        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
+        httpClient: httpClient)
     .WithMemoryStorage(store)
     .Build();
 
