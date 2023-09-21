@@ -26,7 +26,7 @@ var kernel = Kernel.Builder
     .WithMemoryStorage(store)
     .Build();
 
-kernel.ImportSemanticSkillFromDirectory("skills", "qa");
+kernel.ImportSemanticSkillFromDirectory("plugins", "qa");
 
 if (index)
 {
