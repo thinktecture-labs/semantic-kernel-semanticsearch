@@ -1,8 +1,11 @@
 ﻿using HtmlAgilityPack;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.AI.OpenAI;
 using Microsoft.SemanticKernel.Connectors.Memory.Sqlite;
 using Microsoft.SemanticKernel.Orchestration;
+using Microsoft.SemanticKernel.Memory;
+using Microsoft.SemanticKernel.Plugins.Memory;
 
 const string COLLECTION = "documentation";
 
@@ -11,22 +14,25 @@ var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .Build();
 
+var httpClient = new HttpClient(new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
+
 var index = !File.Exists("index.db");
 var store = await SqliteMemoryStore.ConnectAsync("index.db");
 
-var httpClient = new HttpClient(new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
-
-var kernel = Kernel.Builder
+var memory = new MemoryBuilder()
     .WithOpenAITextEmbeddingGenerationService("text-embedding-ada-002", 
         config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
         httpClient: httpClient)
+    .WithMemoryStore(store)
+    .Build();
+
+var kernel = Kernel.Builder
     .WithOpenAIChatCompletionService("gpt-4", 
         config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
         httpClient: httpClient)
-    .WithMemoryStorage(store)
     .Build();
 
-kernel.ImportSemanticSkillFromDirectory("plugins", "qa");
+kernel.ImportSemanticFunctionsFromDirectory("plugins", "qa");
 
 if (index)
 {
@@ -48,7 +54,7 @@ while (true)
 
 async Task<string> Answer(string question)
 {
-    var results = await kernel.Memory.SearchAsync(COLLECTION, question, limit: 2).ToListAsync();
+    var results = await memory.SearchAsync(COLLECTION, question, limit: 2).ToListAsync();
     var variables = new ContextVariables(question)
     {
         ["context"] = results.Any() 
@@ -56,8 +62,8 @@ async Task<string> Answer(string question)
             : "No context found for this question."
     };
     
-    var result = await kernel.RunAsync(variables, kernel.Skills.GetFunction("qa", "answer"));
-    return result.Result;
+    var result = await kernel.RunAsync(variables, kernel.Functions.GetFunction("qa", "answer"));
+    return result.GetValue<string>() ?? string.Empty;
 }
 
 async Task Index()
@@ -88,7 +94,7 @@ async Task IndexUrl(HttpClient client, string url, string contentSelector)
         content = Cleanup(mainElement.InnerText);
     }
     
-    await kernel.Memory.SaveInformationAsync(COLLECTION, content, url, title);
+    await memory.SaveInformationAsync(COLLECTION, content, url, title);
     
     static string Cleanup(string content) => content.Replace("\t", "").Replace("\r\n\r\n", "");
 }
