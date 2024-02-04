@@ -4,7 +4,6 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.AI.OpenAI;
 using Microsoft.SemanticKernel.Connectors.Memory.Sqlite;
 using Microsoft.SemanticKernel.Orchestration;
-using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Memory;
 
 const string COLLECTION = "documentation";
@@ -14,22 +13,18 @@ var config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .Build();
 
-var httpClient = new HttpClient(new HttpClientHandler { Proxy = new LocalDebuggingProxy() });
-
 var index = !File.Exists("index.db");
 var store = await SqliteMemoryStore.ConnectAsync("index.db");
 
 var memory = new MemoryBuilder()
     .WithOpenAITextEmbeddingGenerationService("text-embedding-ada-002", 
-        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
-        httpClient: httpClient)
+        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."))
     .WithMemoryStore(store)
     .Build();
 
 var kernel = Kernel.Builder
-    .WithOpenAIChatCompletionService("gpt-4", 
-        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."), 
-        httpClient: httpClient)
+    .WithOpenAIChatCompletionService("gpt-3.5-turbo-16k", 
+        config["OpenAi:ApiKey"] ?? throw new ArgumentNullException(nameof(config), "OpenAi:ApiKey is null."))
     .Build();
 
 kernel.ImportSemanticFunctionsFromDirectory("plugins", "qa");
@@ -43,11 +38,13 @@ while (true)
 {
     Console.Write("Enter a question or press enter to quit: ");
     var input = Console.ReadLine();
+    
     if (string.IsNullOrWhiteSpace(input))
     {
         Console.WriteLine("Bye 👋");
         break;
     }
+    
     var answer = await Answer(input);
     Console.WriteLine($"🤖:{answer}");
 }
@@ -63,6 +60,7 @@ async Task<string> Answer(string question)
     };
     
     var result = await kernel.RunAsync(variables, kernel.Functions.GetFunction("qa", "answer"));
+    
     return result.GetValue<string>() ?? string.Empty;
 }
 
@@ -70,7 +68,9 @@ async Task Index()
 {
     Console.WriteLine("Indexing urls");
     var urls = config.GetSection("urls").Get<IndexUrl[]>() ?? Array.Empty<IndexUrl>();
+    
     using var client = new HttpClient();
+    
     foreach (var url in urls)
     {
         Console.WriteLine($"Indexing {url.Url}");
